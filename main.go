@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/edhollmon/tcp-chat/server"
 )
@@ -22,4 +24,13 @@ func main() {
 
 	<-quit
 	fmt.Println("Shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Shutdown(ctx); err != nil {
+		fmt.Println("Shutdown timed out:", err)
+		os.Exit(1)
+	}
+	fmt.Println("Server stopped cleanly")
 }

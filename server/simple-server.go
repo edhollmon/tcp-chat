@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -29,7 +31,13 @@ type client struct {
 }
 
 func (c *client) readLoop() {
+	defer c.srv.grWG.Done()
 	defer c.conn.Close()
+	defer func() {
+		c.srv.mu.Lock()
+		delete(c.srv.clients, c.cid)
+		c.srv.mu.Unlock()
+	}()
 	buf := make([]byte, 1024)
 	for {
 		n, err := c.conn.Read(buf)
@@ -106,7 +114,9 @@ func (s *SimpleTCPServer) acceptConnections(l net.Listener, createFunc func(conn
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			// TODO: Identify any errors where we may need to break out of infinite loop
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
 			fmt.Println("Error accepting connection:", err)
 			continue
 		}
@@ -147,4 +157,26 @@ func (s *SimpleTCPServer) startGoRoutine(f func()) bool {
 		f()
 	}()
 	return true
+}
+
+func (s *SimpleTCPServer) Shutdown(ctx context.Context) error {
+	s.mu.Lock()
+	s.Listener.Close()
+	for _, c := range s.clients {
+		c.conn.Close()
+	}
+	s.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		s.grWG.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
