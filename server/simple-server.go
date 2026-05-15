@@ -36,7 +36,8 @@ func (c *client) readLoop() {
 		msg := buf[:n]
 		if n > 0 {
 			fmt.Println("Server received:", string(msg))
-			c.srv.broadcast(msg, c.cid)
+			formatted := fmt.Sprintf("Client %d: %s", c.cid, msg)
+			c.srv.broadcast([]byte(formatted), c.cid)
 		}
 		if err == io.EOF || err != nil {
 			break
