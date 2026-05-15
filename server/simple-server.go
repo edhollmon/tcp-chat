@@ -33,12 +33,26 @@ func (c *client) readLoop() {
 	buf := make([]byte, 1024)
 	for {
 		n, err := c.conn.Read(buf)
+		msg := buf[:n]
 		if n > 0 {
-			fmt.Println("Server received:", string(buf[:n]))
+			fmt.Println("Server received:", string(msg))
+			c.srv.broadcast(msg, c.cid)
 		}
 		if err == io.EOF || err != nil {
 			break
 		}
+	}
+}
+
+func (s *SimpleTCPServer) broadcast(msg []byte, senderId uint64) {
+	// Write to all other connections
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.clients {
+		if c.cid == senderId {
+			continue
+		}
+		c.conn.Write(msg)
 	}
 }
 
@@ -95,6 +109,8 @@ func (s *SimpleTCPServer) acceptConnections(l net.Listener, createFunc func(conn
 			fmt.Println("Error accepting connection:", err)
 			continue
 		}
+
+		fmt.Println("Client connecting...")
 
 		if !s.startGoRoutine(func() {
 			createFunc(conn)
