@@ -1,10 +1,10 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -40,18 +40,11 @@ func (c *client) readLoop() {
 		fmt.Printf("Client %d disconnected\n", c.cid)
 		c.srv.broadcast(fmt.Appendf(nil, "Client %d has left the chat\n", c.cid), c.cid)
 	}()
-	buf := make([]byte, 1024)
-	for {
-		n, err := c.conn.Read(buf)
-		msg := buf[:n]
-		if n > 0 {
-			fmt.Println("Server received:", string(msg))
-			formatted := fmt.Sprintf("Client %d: %s", c.cid, msg)
-			c.srv.broadcast([]byte(formatted), c.cid)
-		}
-		if err == io.EOF || err != nil {
-			break
-		}
+	scanner := bufio.NewScanner(c.conn)
+	for scanner.Scan() {
+		msg := scanner.Bytes()
+		fmt.Println("Server received:", string(msg))
+		c.srv.broadcast(fmt.Appendf(nil, "Client %d: %s\n", c.cid, msg), c.cid)
 	}
 }
 
