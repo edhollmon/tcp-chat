@@ -37,6 +37,8 @@ func (c *client) readLoop() {
 		c.srv.mu.Lock()
 		delete(c.srv.clients, c.cid)
 		c.srv.mu.Unlock()
+		fmt.Printf("Client %d disconnected\n", c.cid)
+		c.srv.broadcast(fmt.Appendf(nil, "Client %d has left the chat\n", c.cid), c.cid)
 	}()
 	buf := make([]byte, 1024)
 	for {
@@ -72,7 +74,7 @@ func NewSimpleTCPServer(address string) *SimpleTCPServer {
 		grMu:    sync.RWMutex{},
 		grWG:    sync.WaitGroup{},
 		clients: make(map[uint64]*client),
-		nextcid: 1,
+		nextcid: 0,
 	}
 }
 
@@ -141,7 +143,12 @@ func (s *SimpleTCPServer) createClient(conn net.Conn) *client {
 	}
 
 	s.clients[c.cid] = c
+	s.mu.Unlock()
 
+	fmt.Printf("Client %d connected\n", c.cid)
+	s.broadcast(fmt.Appendf(nil, "Client %d has joined the chat\n", c.cid), c.cid)
+
+	s.mu.Lock()
 	s.startGoRoutine(func() { c.readLoop() })
 
 	s.mu.Unlock()
