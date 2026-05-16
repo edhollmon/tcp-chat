@@ -16,7 +16,6 @@ type SimpleTCPServer struct {
 	Address  string
 
 	// Go Routine Trackers
-	grMu sync.RWMutex
 	grWG sync.WaitGroup
 
 	// Client Management
@@ -64,7 +63,6 @@ func NewSimpleTCPServer(address string) *SimpleTCPServer {
 	return &SimpleTCPServer{
 		mu:      sync.RWMutex{},
 		Address: address,
-		grMu:    sync.RWMutex{},
 		grWG:    sync.WaitGroup{},
 		clients: make(map[uint64]*client),
 		nextcid: 0,
@@ -92,7 +90,8 @@ func (s *SimpleTCPServer) AcceptLoop() {
 
 	s.Listener = l
 
-	go s.acceptConnections(l, func(conn net.Conn) { s.createClient(conn) })
+	s.grWG.Add(1)
+	go s.acceptConnections(l)
 	s.mu.Unlock()
 }
 
@@ -104,7 +103,8 @@ func (s *SimpleTCPServer) getServerListener() (net.Listener, error) {
 	return l, nil
 }
 
-func (s *SimpleTCPServer) acceptConnections(l net.Listener, createFunc func(conn net.Conn)) {
+func (s *SimpleTCPServer) acceptConnections(l net.Listener) {
+	defer s.grWG.Done()
 
 	for {
 		conn, err := l.Accept()
@@ -118,16 +118,14 @@ func (s *SimpleTCPServer) acceptConnections(l net.Listener, createFunc func(conn
 
 		fmt.Println("Client connecting...")
 
-		if !s.startGoRoutine(func() {
-			createFunc(conn)
-			s.grWG.Done()
-		}) {
-			conn.Close()
-		}
+		s.grWG.Add(1)
+		go s.createClient(conn)
 	}
 }
 
-func (s *SimpleTCPServer) createClient(conn net.Conn) *client {
+func (s *SimpleTCPServer) createClient(conn net.Conn) {
+	defer s.grWG.Done()
+
 	s.mu.Lock()
 	c := &client{
 		cid:  atomic.AddUint64(&s.nextcid, 1),
@@ -141,22 +139,8 @@ func (s *SimpleTCPServer) createClient(conn net.Conn) *client {
 	fmt.Printf("Client %d connected\n", c.cid)
 	s.broadcast(fmt.Appendf(nil, "Client %d has joined the chat\n", c.cid), c.cid)
 
-	s.mu.Lock()
-	s.startGoRoutine(func() { c.readLoop() })
-
-	s.mu.Unlock()
-
-	return c
-}
-
-func (s *SimpleTCPServer) startGoRoutine(f func()) bool {
-	s.grMu.Lock()
-	defer s.grMu.Unlock()
 	s.grWG.Add(1)
-	go func() {
-		f()
-	}()
-	return true
+	go c.readLoop()
 }
 
 func (s *SimpleTCPServer) Shutdown(ctx context.Context) error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/trace"
 	"syscall"
 	"time"
 
@@ -13,11 +14,19 @@ import (
 )
 
 func main() {
+	addr := flag.String("addr", ":3000", "address to listen on (e.g. :3000, 0.0.0.0:8080)")
+	enableTrace := flag.Bool("trace", false, "enable runtime tracing to trace.out")
+	flag.Parse()
+
+	if *enableTrace {
+		f, _ := os.Create("trace.out")
+		defer f.Close()
+		trace.Start(f)
+		defer trace.Stop()
+	}
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	addr := flag.String("addr", ":3000", "address to listen on (e.g. :3000, 0.0.0.0:8080)")
-	flag.Parse()
 
 	s := server.NewSimpleTCPServer(*addr)
 	s.Start()

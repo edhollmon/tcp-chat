@@ -32,6 +32,20 @@ The listen address defaults to `:3000`. Use the `-addr` flag to override it:
 ./tcp-chat -addr 0.0.0.0:9000
 ```
 
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-addr` | `:3000` | Address to listen on |
+| `-trace` | `false` | Enable runtime tracing to `trace.out` |
+
+To enable tracing:
+
+```bash
+./tcp-chat -trace
+go tool trace trace.out
+```
+
 ## Connecting as a client
 
 ### Via CLI
@@ -86,7 +100,6 @@ func main() {
 ```
 .
 ├── main.go                  # Entry point — starts the server and blocks until SIGINT
-├── app.go                   # App struct wiring server lifecycle
 ├── server/
 │   └── simple-server.go     # TCP listener and connection dispatch
 └── client/
