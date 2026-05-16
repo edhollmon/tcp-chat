@@ -12,8 +12,8 @@ import (
 
 type SimpleTCPServer struct {
 	mu       sync.RWMutex
-	Listener net.Listener
-	Address  string
+	listener net.Listener
+	address  string
 
 	// Go Routine Trackers
 	grWG sync.WaitGroup
@@ -62,7 +62,7 @@ func (s *SimpleTCPServer) broadcast(msg []byte, senderId uint64) {
 func NewSimpleTCPServer(address string) *SimpleTCPServer {
 	return &SimpleTCPServer{
 		mu:      sync.RWMutex{},
-		Address: address,
+		address: address,
 		grWG:    sync.WaitGroup{},
 		clients: make(map[uint64]*client),
 		nextcid: 0,
@@ -75,28 +75,28 @@ func (s *SimpleTCPServer) Start() {
 
 	// TODO: Load Server Options here
 
-	s.AcceptLoop()
+	s.acceptLoop()
 }
 
-func (s *SimpleTCPServer) AcceptLoop() {
+func (s *SimpleTCPServer) acceptLoop() {
 	s.mu.Lock()
-	l, err := s.getServerListener()
+	l, err := s.getServerlistener()
 	if err != nil {
 		s.mu.Unlock()
-		fmt.Printf("Error listening on: %s", s.Address)
+		fmt.Printf("Error listening on: %s", s.address)
 		fmt.Println(err)
 		return
 	}
 
-	s.Listener = l
+	s.listener = l
 
 	s.grWG.Add(1)
 	go s.acceptConnections(l)
 	s.mu.Unlock()
 }
 
-func (s *SimpleTCPServer) getServerListener() (net.Listener, error) {
-	l, err := net.Listen("tcp", s.Address)
+func (s *SimpleTCPServer) getServerlistener() (net.Listener, error) {
+	l, err := net.Listen("tcp", s.address)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (s *SimpleTCPServer) createClient(conn net.Conn) {
 
 func (s *SimpleTCPServer) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
-	s.Listener.Close()
+	s.listener.Close()
 	for _, c := range s.clients {
 		c.conn.Close()
 	}

@@ -1,5 +1,4 @@
 # Binaries
-tcp-chat
 *.exe
 *.exe~
 *.dll
@@ -19,6 +18,7 @@ go.work.sum
 vendor/
 
 # Build output
+bin/
 dist/
 
 # OS files

@@ -2,7 +2,7 @@
 
 # tcp-chat
 
-A simple TCP chat server written in Go.
+A simple TCP chat server and client written in Go. Multiple clients connect to the server and messages are broadcast to all other connected clients.
 
 ## Prerequisites
 
@@ -10,98 +10,80 @@ A simple TCP chat server written in Go.
 
 ## Getting started
 
-Clone the repo and build the binary:
-
 ```bash
 git clone https://github.com/edhollmon/tcp-chat.git
 cd tcp-chat
-go build -o tcp-chat .
+```
+
+Build the server and client:
+
+```bash
+go build -o bin/server ./cmd/server
+go build -o bin/client ./cmd/client
 ```
 
 Run the server:
 
 ```bash
-./tcp-chat
-# Listening on: :3000
+./bin/server
+# Starting Simple TCP Server
+# Server is ready
 ```
 
-The listen address defaults to `:3000`. Use the `-addr` flag to override it:
+Run a client (in a separate terminal):
 
 ```bash
-./tcp-chat -addr :8080
-./tcp-chat -addr 0.0.0.0:9000
+./bin/client
+# Connected to :3000
 ```
 
+Type a message and press Enter to send. Press `Ctrl+D` to disconnect.
+
 ## Flags
+
+### Server
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-addr` | `:3000` | Address to listen on |
 | `-trace` | `false` | Enable runtime tracing to `trace.out` |
 
-To enable tracing:
-
 ```bash
-./tcp-chat -trace
-go tool trace trace.out
+./bin/server -addr :8080
+./bin/server -trace && go tool trace trace.out
 ```
 
-## Connecting as a client
+### Client
 
-### Via CLI
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-addr` | `:3000` | Server address to connect to |
 
-Use `nc` (netcat) — available on macOS and most Linux distros by default:
+```bash
+./bin/client -addr :8080
+```
+
+## Connecting with other tools
+
+You can also connect using standard CLI tools:
 
 ```bash
 nc localhost 3000
 ```
 
-Or `telnet`:
-
 ```bash
 telnet localhost 3000
-```
-
-Type a message and press Enter. The server will log everything it receives.
-
-### Programmatically
-
-Add the client package to your Go module:
-
-```bash
-go get github.com/edhollmon/tcp-chat/client
-```
-
-Then connect and send messages:
-
-```go
-package main
-
-import (
-    "log"
-
-    "github.com/edhollmon/tcp-chat/client"
-)
-
-func main() {
-    c := client.NewSimpleTCPClient(":3000")
-    if err := c.Connect(); err != nil {
-        log.Fatal(err)
-    }
-
-    if err := c.Send("Hello World"); err != nil {
-        log.Fatal(err)
-    }
-}
 ```
 
 ## Project structure
 
 ```
 .
-├── main.go                  # Entry point — starts the server and blocks until SIGINT
+├── cmd/
+│   ├── server/main.go       # Server entry point
+│   └── client/main.go       # Client entry point
 ├── server/
-│   └── simple-server.go     # TCP listener and connection dispatch
+│   └── simple-server.go     # TCP listener, connection dispatch, and broadcast
 └── client/
-    └── simple-client.go     # TCP client — Connect and Send
+    └── simple-client.go     # TCP client — connect, read, and write loops
 ```

@@ -1,37 +1,61 @@
 package client
 
 import (
+	"bufio"
 	"fmt"
 	"net"
+	"os"
 )
 
 type SimpleTCPClient struct {
-	Address string
-	Conn    net.Conn
+	address string
+	conn    net.Conn
 }
 
 func NewSimpleTCPClient(address string) *SimpleTCPClient {
 	return &SimpleTCPClient{
-		Address: address,
+		address: address,
 	}
 }
 
-func (client *SimpleTCPClient) Connect() error {
-	conn, err := net.Dial("tcp", client.Address)
+func (c *SimpleTCPClient) Start() {
+	if err := c.connect(); err != nil {
+		fmt.Println("Failed to connect:", err)
+		return
+	}
+	defer c.conn.Close()
+
+	go c.readLoop()
+	c.writeLoop()
+}
+
+func (c *SimpleTCPClient) connect() error {
+	conn, err := net.Dial("tcp", c.address)
 	if err != nil {
 		return err
 	}
 
-	client.Conn = conn
+	c.conn = conn
 	return nil
 }
 
-func (client *SimpleTCPClient) Send(msg string) error {
-	fmt.Println("Client attempting to send :", msg)
-	_, err := client.Conn.Write([]byte(msg))
-	if err != nil {
-		fmt.Println("Error writing message from client", err)
-		return err
+func (c *SimpleTCPClient) writeLoop() {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if _, err := fmt.Fprintf(c.conn, "%s\n", line); err != nil {
+			fmt.Println("Send error:", err)
+			return
+		}
 	}
-	return nil
+}
+
+func (c *SimpleTCPClient) readLoop() {
+	defer c.conn.Close()
+
+	scanner := bufio.NewScanner(c.conn)
+	for scanner.Scan() {
+		msg := scanner.Bytes()
+		fmt.Println(string(msg))
+	}
 }
