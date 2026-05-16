@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/edhollmon/tcp-chat/client"
+	"github.com/edhollmon/tcp-chat/internal/client"
 )
 
 func main() {

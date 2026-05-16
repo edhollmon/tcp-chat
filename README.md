@@ -80,10 +80,9 @@ telnet localhost 3000
 ```
 .
 ├── cmd/
-│   ├── server/main.go       # Server entry point
-│   └── client/main.go       # Client entry point
-├── server/
-│   └── simple-server.go     # TCP listener, connection dispatch, and broadcast
-└── client/
-    └── simple-client.go     # TCP client — connect, read, and write loops
+│   ├── server/main.go                    # Server entry point
+│   └── client/main.go                    # Client entry point
+└── internal/
+    ├── server/simple-server.go           # TCP listener, connection dispatch, and broadcast
+    └── client/simple-client.go           # TCP client — connect, read, and write loops
 ```

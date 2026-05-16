@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edhollmon/tcp-chat/server"
+	"github.com/edhollmon/tcp-chat/internal/server"
 )
 
 func main() {
